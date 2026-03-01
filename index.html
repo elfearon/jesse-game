@@ -42,67 +42,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 #scene.period-dawn #stars,
 #scene.period-day  #stars{ opacity:0; pointer-events:none; }
 
-/* ── MOON ─────────────────────────────────────── */
-#moon{
-  position:absolute;
-  width:72px;height:72px;
-  background:radial-gradient(circle at 38% 36%, #fffde8, #ffeea0 45%, #ffd050 100%);
-  border-radius:50%;
-  box-shadow:
-    0 0 0 2px rgba(255,253,224,.7),
-    0 0 20px rgba(255,253,200,.95),
-    0 0 50px rgba(255,240,140,.6),
-    0 0 95px rgba(255,220,80,.32),
-    0 0 170px rgba(255,210,50,.16);
-  left:calc(36.1% - 36px);
-  top:calc(100% + 100px);
-  z-index:1;
-  transition:top 10s cubic-bezier(.2,.8,.3,1);
-  pointer-events:none;
-  animation:moonPulse 4s ease-in-out infinite;
-  will-change:transform,opacity,top;
-  backface-visibility:hidden;
-}
-#moon.risen{ top:calc(5.8% - 36px); }
-/* atmospheric halo — transparent center preserves moon disc, ring glow beyond */
-#moon::before{
-  content:'';
-  position:absolute;
-  width:260px;height:260px;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  background:radial-gradient(circle,
-    transparent 28%,
-    rgba(255,253,224,.22) 36%,
-    rgba(255,248,200,.13) 50%,
-    rgba(255,240,150,.06) 64%,
-    transparent 80%);
-  animation:moonHalo 4s ease-in-out infinite;
-  pointer-events:none;
-}
-@keyframes moonPulse{
-  0%,100%{
-    box-shadow:
-      0 0 0 2px rgba(255,253,224,.7),
-      0 0 20px rgba(255,253,200,.95),
-      0 0 50px rgba(255,240,140,.6),
-      0 0 95px rgba(255,220,80,.32),
-      0 0 170px rgba(255,210,50,.16);
-  }
-  50%{
-    box-shadow:
-      0 0 0 3px rgba(255,253,224,.9),
-      0 0 30px rgba(255,253,200,1),
-      0 0 72px rgba(255,240,140,.78),
-      0 0 130px rgba(255,220,80,.46),
-      0 0 220px rgba(255,210,50,.22);
-  }
-}
-@keyframes moonHalo{
-  0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}
-  50%     {opacity:1; transform:translate(-50%,-50%) scale(1.1)}
-}
 
 /* ── FOG LAYERS ──────────────────────────────── */
 #fog{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
@@ -169,7 +108,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 }
 
 
-/* ── BIRDS ───────────────────────────────────── */
+/* ── BIRDS / BATS ────────────────────────────── */
 #birds{position:absolute;inset:0;z-index:4;pointer-events:none}
 .flock{position:absolute;pointer-events:none;will-change:transform;backface-visibility:hidden}
 .bird{position:absolute;width:7px;height:4px;will-change:transform}
@@ -191,6 +130,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 .bird::after {left:3.5px;transform-origin:0% 100%;animation-name:wingR}
 @keyframes wingL{from{transform:rotate(0deg)}to{transform:rotate(-20deg)}}
 @keyframes wingR{from{transform:rotate(0deg)}to{transform:rotate( 20deg)}}
+
+/* Bats — bigger, faster flap, pale against night sky */
+.bat{position:absolute;width:10px;height:5px;will-change:transform}
+.bat::before,
+.bat::after{
+  content:'';
+  position:absolute;
+  top:0;
+  width:5px;height:5px;
+  border-top:2px solid rgba(180,150,220,.7);
+  border-radius:50% 50% 0 0 / 100% 100% 0 0;
+  animation-duration:.28s;
+  animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite;
+  animation-direction:alternate;
+  animation-delay:var(--fd,0s);
+}
+.bat::before{left:0;transform-origin:100% 100%;animation-name:batWingL}
+.bat::after {left:5px;transform-origin:0% 100%;animation-name:batWingR}
+@keyframes batWingL{from{transform:rotate(0deg)}to{transform:rotate(-35deg)}}
+@keyframes batWingR{from{transform:rotate(0deg)}to{transform:rotate( 35deg)}}
 @keyframes flockRight{
   from{transform:translateX(-200px)}
   to  {transform:translateX(calc(100vw + 200px))}
@@ -212,7 +172,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 /*  bug.png is 1024×1536, shown at 210px wide → 315px tall  */
 #bug-wrap{
   position:absolute;
-  bottom:5%;
+  bottom:calc(5% + 100px);
   left:50%;transform:translateX(-50%);
   width:210px;height:315px;
   transform-origin:center bottom;
@@ -276,47 +236,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 /* Approximate positions over Bug's eyeball locations in bug.png.
    Tune top/left/right if they don't land on her eyes perfectly. */
 
-/* ── BLANKET ─────────────────────────────────── */
-#blanket{
-  position:absolute;
-  bottom:-4%;left:5%;right:5%;height:38%;
-  background:linear-gradient(160deg,#7030a0 0%,#501870 35%,#9040b8 65%,#6828a0 100%);
-  border-radius:14px 14px 6px 6px;
-  transform:translateY(115%);
-  transition:transform 1.3s cubic-bezier(.25,.46,.45,.94);
-  z-index:16;
-  box-shadow:inset 0 5px 14px rgba(255,200,255,.12), 0 -6px 22px rgba(120,40,180,.5);
-  pointer-events:none;
-}
-#blanket::before{
-  content:'✦  ✦  ✦';
-  position:absolute;top:10px;left:50%;transform:translateX(-50%);
-  font-size:10px;color:rgba(255,210,255,.45);
-  letter-spacing:10px;white-space:nowrap;
-}
-#blanket::after{
-  content:'';position:absolute;
-  bottom:0;left:0;right:0;height:8px;
-  background:rgba(255,210,255,.1);
-  border-radius:0 0 6px 6px;
-}
-#blanket.on { transform:translateY(30%); }
-#blanket.off{ transform:translateY(115%); }
 
-/* ── SLEEP OVERLAY (darkens scene during sleep) ── */
-#sleep-veil{
-  position:absolute;inset:0;
-  background:linear-gradient(180deg, transparent 30%, rgba(30,10,60,.55) 100%);
-  border-radius:4px;
-  opacity:0;pointer-events:none;z-index:11;
-  transition:opacity .8s ease;
-}
-#sleep-veil.show{opacity:1}
 
 /* ── SPEECH BUBBLE ───────────────────────────── */
 #bubble{
   position:absolute;
-  bottom:calc(5% + 290px);
+  bottom:calc(5% + 390px);
   left:50%;
   transform:translateX(-12%);
   background:rgba(255,255,255,.94);
@@ -408,23 +333,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 }
 #bug-img.flutter{animation:flutterShim .13s linear infinite}
 
-/* villain: grow + eerie tint */
+/* villain: grow to 3x */
 @keyframes villainSwell{
   0%  {transform:scale(1)}
-  55% {transform:scale(1.52)}
-  100%{transform:scale(1.44)}
+  60% {transform:scale(3.1)}
+  100%{transform:scale(3)}
 }
 @keyframes villainShrink{
-  from{transform:scale(1.44)}
+  from{transform:scale(3)}
   to  {transform:scale(1)}
 }
 #bug-wrap.v-in  #bug-img{
   animation:villainSwell .4s ease-out forwards;
-  filter:saturate(2.5) hue-rotate(-20deg) brightness(1.1);
 }
 #bug-wrap.v-out #bug-img{
   animation:villainShrink .6s ease-in-out forwards;
-  filter:none;
 }
 
 /* yawn */
@@ -497,7 +420,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 
 /* ── NOTE UI ──────────────────────────────────── */
 #noteBtn{
-  position:fixed;bottom:24px;right:24px;
+  position:fixed;bottom:80px;right:24px;
   background:rgba(8,4,20,.62);
   border:1px solid rgba(160,100,255,.35);
   border-radius:22px;
@@ -512,7 +435,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
 #noteBtn:hover{transform:translateY(-2px);box-shadow:0 0 28px rgba(150,80,255,.45)}
 
 #noteDisplay{
-  position:fixed;bottom:70px;right:24px;
+  position:fixed;bottom:126px;right:24px;
   background:rgba(8,4,20,.7);
   border:1px solid rgba(160,100,255,.3);
   border-radius:12px;
@@ -585,6 +508,92 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
   border-radius:0;
   background:#fff;
 }
+
+/* ── SLEEP BEDDING ───────────────────────────── */
+/* Bug rotates 80deg CW around center-bottom when asleep.
+   Head ends up ~264px right of center, ~45px above bug-wrap bottom.
+   Pillow sits under the head; blanket drapes over the torso. */
+#pillow{
+  position:absolute;
+  width:130px;
+  bottom:calc(5% + 80px);
+  left:calc(50% + 160px);
+  z-index:9;
+  pointer-events:none;
+  transform:translateX(400px);
+  transition:transform 1s cubic-bezier(.25,.46,.45,.94);
+}
+#pillow.show{transform:translateX(0)}
+
+#blanket{
+  position:absolute;
+  width:220px;
+  bottom:calc(5% + 70px);
+  left:calc(50% - 115px);
+  z-index:11;
+  pointer-events:none;
+  transform:translateY(400px);
+  transition:transform 1.2s cubic-bezier(.25,.46,.45,.94);
+}
+#blanket.show{transform:translateY(0)}
+
+/* ── DOCK BAR ────────────────────────────────── */
+#dock{
+  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;align-items:center;
+  background:rgba(8,4,20,.55);
+  border:1px solid rgba(160,100,255,.22);
+  border-radius:28px;
+  padding:10px 18px 8px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 24px rgba(80,30,160,.25);
+  z-index:100;
+}
+.dock-btn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;cursor:pointer;padding:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.dock-icon{
+  width:44px;height:44px;
+  border-radius:50%;
+  background:rgba(20,10,42,.6);
+  border:1px solid rgba(160,100,255,.28);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  transition:transform .15s, background .15s, box-shadow .15s;
+}
+.dock-btn:hover .dock-icon{
+  transform:translateY(-3px) scale(1.08);
+  background:rgba(40,18,72,.7);
+  box-shadow:0 0 14px rgba(160,100,255,.4);
+}
+.dock-btn:active .dock-icon{
+  transform:scale(.92);
+}
+.dock-icon-img{padding:4px;overflow:hidden}
+.dock-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.dock-lbl{
+  font-size:9px;
+  color:rgba(210,175,255,.65);
+  font-family:Georgia,serif;
+  letter-spacing:.3px;
+  white-space:nowrap;
+}
+
+/* dance: side-to-side bounce */
+@keyframes bugDance{
+  0%  {transform:translateX(-50%) rotate(0) translateY(0)}
+  12% {transform:translateX(-50%) rotate(-12deg) translateY(-8px)}
+  25% {transform:translateX(-50%) rotate(10deg) translateY(0)}
+  37% {transform:translateX(-50%) rotate(-8deg) translateY(-6px)}
+  50% {transform:translateX(-50%) rotate(12deg) translateY(0)}
+  62% {transform:translateX(-50%) rotate(-10deg) translateY(-8px)}
+  75% {transform:translateX(-50%) rotate(6deg) translateY(0)}
+  87% {transform:translateX(-50%) rotate(-4deg) translateY(-4px)}
+  100%{transform:translateX(-50%) rotate(0) translateY(0)}
+}
+#bug-wrap.dancing{animation:bugDance 1.2s ease-in-out}
 </style>
 </head>
 <body>
@@ -606,10 +615,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
   <!-- Stars (twinkling, above forest) -->
   <div id="stars"></div>
 
-  <!-- Moon -->
-  <div id="moon"></div>
-
-  <!-- Critters layer -->
+<!-- Critters layer -->
   <div id="critters"></div>
 
   <!-- Birds flock layer (above fog+critters, below bug) -->
@@ -621,13 +627,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
   <!-- Particles -->
   <div id="particles"></div>
 
+  <!-- Sleep bedding -->
+  <img id="pillow" src="pillow.png" alt="">
+  <img id="blanket" src="blanket.png" alt="">
+
   <!-- Bug -->
   <div id="bug-wrap">
     <img id="bug-img" src="bug.png" alt="Bug">
 
-    <div id="sleep-veil"></div>
-
-    <div id="blanket"></div>
   </div>
 
   <!-- Fancy overlay: hat + mustache + monocle (full-scene png) -->
@@ -651,6 +658,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#060410}
   <!-- Note -->
   <div id="noteDisplay"></div>
   <button id="noteBtn">leave a note 🍪</button>
+
+  <!-- Dock bar -->
+  <div id="dock">
+    <button class="dock-btn" id="dFeed"><div class="dock-icon">🍪</div><span class="dock-lbl">Feed</span></button>
+    <button class="dock-btn" id="dRug"><div class="dock-icon dock-icon-img"><img src="rug.png" alt="Rug" class="dock-img"></div><span class="dock-lbl">Rug</span></button>
+    <button class="dock-btn" id="dDress"><div class="dock-icon">🎩</div><span class="dock-lbl">Dress Up</span></button>
+    <button class="dock-btn" id="dSing"><div class="dock-icon">🎵</div><span class="dock-lbl">Sing</span></button>
+    <button class="dock-btn" id="dSleep"><div class="dock-icon">🌙</div><span class="dock-lbl">Sleep</span></button>
+    <button class="dock-btn" id="dGift"><div class="dock-icon">🎁</div><span class="dock-lbl">Gift</span></button>
+  </div>
 
 </div><!-- /scene -->
 
@@ -679,11 +696,10 @@ const $forestBase = document.getElementById('forest-base');
 const $forestNext = document.getElementById('forest-next');
 const $bugW   = document.getElementById('bug-wrap');
 const $bugI   = document.getElementById('bug-img');
-const $moon   = document.getElementById('moon');
+const $pillow = document.getElementById('pillow');
+const $blanketEl = document.getElementById('blanket');
 const $bubble = document.getElementById('bubble');
 const $fancy  = document.getElementById('fancy');
-const $blank  = document.getElementById('blanket');
-const $veil   = document.getElementById('sleep-veil');
 const $parts  = document.getElementById('particles');
 const $criL   = document.getElementById('critters');
 const $birds  = document.getElementById('birds');
@@ -708,6 +724,11 @@ const S = {
   fluttering: false,
   twirling:   false,
   eyePoke:    false,
+  feeding:    false,    // true during cookie eating sequence
+  gifting:    false,    // true during 3s wishfulbug.png display
+  singing:    false,    // true during 3s popstarbug.png display
+  dressing:   false,    // true during 3s fancybug.png display
+  rugMode:    false,    // true during 3s bugrug.png display
   kissing:    false,    // true during 1s kisscat.png display
   kissTm:     null,
   worried:    false,    // true when MY < 50 and showing worriedbug.png
@@ -874,7 +895,7 @@ function inZone(z, px, py) {
 
 // Preload alternate images so swaps are instant
 (function(){
-  ['lefteye.png','righteye.png','asleep.png','kisscat.png','worriedbug.png']
+  ['lefteye.png','righteye.png','asleep.png','kisscat.png','worriedbug.png','bugrug.png','eatingcookies.png','cookiesgone.png','fancybug.png','popstarbug.png','ragebug.png','wishfulbug.png','pillow.png','blanket.png']
     .forEach(s => { new Image().src = s; });
 })();
 
@@ -886,7 +907,7 @@ function baseImg() {
 // Swaps to the correct base image when no temp state is active;
 // tracks S.worried so swaps only happen when the threshold actually changes.
 function syncBase() {
-  if (S.sleeping || S.eyePoke || S.kissing || S.busy) return;
+  if (S.sleeping || S.eyePoke || S.kissing || S.rugMode || S.feeding || S.dressing || S.singing || S.gifting || S.busy) return;
   const want = baseImg();
   if (!S.worried && want === 'worriedbug.png') {
     S.worried = true;
@@ -1028,21 +1049,20 @@ function fallAsleep(autoWakeSecs = 0) {
 
     // 2. Lie down
     imgClass('lying', ['stretch']);
-    $veil.classList.add('show');
-
     setTimeout(() => {
       // 3. Sleeping state (puff breathing) — swap to sleeping image
       $bugI.classList.remove('lying');
       $bugI.src = 'asleep.png';
       $bugI.classList.add('asleep');
 
+      // 3b. Slide in pillow + blanket
+      $pillow.classList.add('show');
+      $blanketEl.classList.add('show');
+
       // 4. ZZZs
       S.zzzInt = setInterval(spawnZzz, 1900);
 
-      // 5. Moon rises
-      $moon.classList.add('risen');
-
-      // 6. Suspicious peek loop
+      // 5. Suspicious peek loop
       schedulePeek();
 
       // Auto-wake for nap
@@ -1054,9 +1074,9 @@ function fallAsleep(autoWakeSecs = 0) {
 }
 
 function wakeUp(fromInteract = true) {
-  if (!S.sleeping) return;
+  if (!S.sleeping) return Promise.resolve();
   S.sleeping = false;
-  S.busy = false;
+  S.busy = true;
 
   clearInterval(S.zzzInt);
   clearTimeout(S.peekTm);
@@ -1065,21 +1085,30 @@ function wakeUp(fromInteract = true) {
   S.stayAwakeTm = null;
   S.stayAwake = false;
 
+  // Slide out bedding
+  $pillow.classList.remove('show');
+  $blanketEl.classList.remove('show');
+
   // Swap back to base image before rise animation
   $bugI.src = baseImg();
-  $veil.classList.remove('show');
 
-  // Rise + stretch
+  // Rise + stretch — returns a promise that resolves when done
   $bugI.classList.remove('asleep','lying');
   imgClass('waking', []);
-  setTimeout(() => {
-    $bugI.classList.remove('waking');
-    imgClass('stretch', []);
-    setTimeout(() => $bugI.classList.remove('stretch'), 1200);
-  }, 950);
+  const done = new Promise(resolve => {
+    setTimeout(() => {
+      $bugI.classList.remove('waking');
+      imgClass('stretch', []);
+      setTimeout(() => {
+        $bugI.classList.remove('stretch');
+        S.busy = false;
+        resolve();
+      }, 1200);
+    }, 950);
+  });
 
   if (fromInteract) {
-    // Poke-wake: boost Miss You, keep moon up, stay awake for 1 minute
+    // Poke-wake: boost Miss You, stay awake for 1 minute
     onInteract();
     say('mmph... 😴 oh! hi!!');
     S.stayAwake = true;
@@ -1092,10 +1121,10 @@ function wakeUp(fromInteract = true) {
       }
     }, 60000);
   } else {
-    // Natural wake (8am alarm or nap timeout): remove moon, say good morning
+    // Natural wake (8am alarm or nap timeout): say good morning
     say('*stretch* ✨ good morning', 3000);
-    $moon.classList.remove('risen');
   }
+  return done;
 }
 
 function schedulePeek() {
@@ -1123,17 +1152,19 @@ function schedulePeek() {
 function villainMode() {
   if (S.busy || S.sleeping) return;
   S.busy = true; S.villain = true;
+  $bugI.src = 'ragebug.png';
   $bugW.classList.add('v-in');
-  say('muahahaha 😈', 3600);
+  say('muahahaha 😈', 1200);
   setTimeout(() => {
     $bugW.classList.remove('v-in');
     $bugW.classList.add('v-out');
+    $bugI.src = baseImg();
     say('...ahem. nevermind. 😇', 2500);
     setTimeout(() => {
       $bugW.classList.remove('v-out');
       S.villain = false; S.busy = false;
     }, 700);
-  }, 3700);
+  }, 1000);
 }
 
 // ═══════════════════════════════════════════════
@@ -1142,7 +1173,7 @@ function villainMode() {
 function scheduleRandom() {
   setTimeout(() => {
     if (!S.busy && !S.sleeping && !S.stayAwake) {
-      if (Math.random() < .5) villainMode();
+      if (Math.random() < .67) villainMode();
       else fallAsleep(10 + Math.random() * 5); // nap 10–15s
     }
     scheduleRandom();
@@ -1191,13 +1222,6 @@ function updateMeters() {
   // sleepy meter
   const sl = sleepiness();
   $slFill.style.width = sl + '%';
-
-  // moon position follows sleepiness softly — night only
-  if (currentPeriod === 'night' && sl > 0 && !$moon.classList.contains('risen')) {
-    $moon.style.top = (100 - Math.min(50, sl * 0.35)) + '%';
-  } else if (sl === 0 || currentPeriod !== 'night') {
-    if (!S.sleeping) { $moon.style.top = ''; $moon.classList.remove('risen'); }
-  }
 
   // random yawn when drowsy (skip during stay-awake window)
   if (sl > 45 && !S.sleeping && !S.busy && !S.stayAwake && Math.random() < .04) {
@@ -1264,12 +1288,6 @@ function applyPeriod(period, instant) {
   // — Scene class for fog tint / star visibility —
   $scene.classList.remove('period-night','period-dawn','period-day','period-dusk');
   $scene.classList.add('period-' + period);
-
-  // — Moon: only visible during night —
-  if (period !== 'night') {
-    $moon.classList.remove('risen');
-    $moon.style.top = '';
-  }
 }
 
 function checkPeriod() { applyPeriod(timePeriod()); }
@@ -1669,9 +1687,9 @@ function scheduleSpores() {
 //  BIRDS
 // ═══════════════════════════════════════════════
 function spawnFlock() {
-  if (currentPeriod !== 'day' && currentPeriod !== 'dusk') return;
+  const isNight  = currentPeriod === 'night';
   const fromLeft = Math.random() < 0.5;
-  const count    = 8 + Math.floor(Math.random() * 5);          // 8–12 birds
+  const count    = 8 + Math.floor(Math.random() * 5);          // 8–12
   const topPct   = Math.random() * 8;                          // top 8% only
   const dur      = (12 + Math.random() * 3).toFixed(1) + 's'; // 12–15s crossing
 
@@ -1686,10 +1704,8 @@ function spawnFlock() {
 
   for (let i = 0; i < count; i++) {
     const b = document.createElement('div');
-    b.className = 'bird';
-    // loose V: birds spread ~14px apart horizontally, lead bird at tip
+    b.className = isNight ? 'bat' : 'bird';
     const xOff = i * 14 + Math.random() * 8;
-    // vertical scatter: slight rise from lead, natural drift ±8px
     const yOff = i === 0 ? 0 : (i * 1.2 + Math.random() * 10 - 5);
     b.style.left = (fromLeft ? xOff : (count - 1 - i) * 14 + Math.random() * 8) + 'px';
     b.style.top  = yOff + 'px';
@@ -1716,6 +1732,103 @@ applyPeriod(timePeriod(), true);
 scheduleSpores();
 
 scheduleRandom();
+
+// ═══════════════════════════════════════════════
+//  DOCK BAR
+// ═══════════════════════════════════════════════
+document.getElementById('dFeed').addEventListener('click', async () => {
+  if (S.feeding) return;
+  if (S.sleeping) await wakeUp(true);
+  if (S.busy) return;
+  S.feeding = true;
+  MY = Math.min(100, MY + 30);
+  saveMY(MY);
+  floatEmoji('🍪', 7);
+  sparkles($bugW, 6);
+  wiggle();
+  $bugI.src = 'eatingcookies.png';
+  say('*nom nom nom* 🍪✨', 1000);
+  setTimeout(() => {
+    $bugI.src = 'cookiesgone.png';
+    say('all gone!! 😋', 2000);
+    setTimeout(() => {
+      S.feeding = false;
+      $bugI.src = baseImg();
+    }, 2000);
+  }, 1000);
+});
+
+document.getElementById('dRug').addEventListener('click', async () => {
+  if (S.rugMode) return;
+  if (S.sleeping) await wakeUp(true);
+  if (S.busy) return;
+  S.rugMode = true;
+  $bugI.src = 'bugrug.png';
+  say('i am rug now 🧶', 3000);
+  wiggle();
+  onInteract();
+  setTimeout(() => {
+    S.rugMode = false;
+    $bugI.src = baseImg();
+  }, 3000);
+});
+
+document.getElementById('dDress').addEventListener('click', async () => {
+  if (S.dressing) return;
+  if (S.sleeping) await wakeUp(true);
+  if (S.busy) return;
+  S.dressing = true;
+  $bugI.src = 'fancybug.png';
+  sparkles($bugW, 10);
+  say('I am you! 🥸');
+  onInteract();
+  setTimeout(() => {
+    S.dressing = false;
+    $bugI.src = baseImg();
+  }, 3000);
+});
+
+document.getElementById('dSing').addEventListener('click', async () => {
+  if (S.singing) return;
+  if (S.sleeping) await wakeUp(true);
+  if (S.busy) return;
+  S.singing = true;
+  $bugI.src = 'popstarbug.png';
+  floatEmoji('🎵', 3);
+  setTimeout(() => floatEmoji('🎶', 3), 600);
+  setTimeout(() => floatEmoji('🎼', 2), 1200);
+  wiggle();
+  say('la la laaa~ 🎵🎶', 3500);
+  onInteract();
+  setTimeout(() => {
+    S.singing = false;
+    $bugI.src = baseImg();
+  }, 3000);
+});
+
+document.getElementById('dSleep').addEventListener('click', () => {
+  if (S.sleeping) return;
+  if (S.busy) return;
+  fallAsleep(12 + Math.random() * 6);
+});
+
+document.getElementById('dGift').addEventListener('click', async () => {
+  if (S.gifting) return;
+  if (S.sleeping) await wakeUp(true);
+  if (S.busy) return;
+  S.gifting = true;
+  $bugI.src = 'wishfulbug.png';
+  floatHearts();
+  sparkles($bugW, 14);
+  setTimeout(() => floatEmoji('✨', 5), 400);
+  wiggle();
+  say('for me?! 🥺', 3500);
+  onInteract();
+  setTimeout(() => {
+    S.gifting = false;
+    $bugI.src = baseImg();
+  }, 3000);
+});
 
 </script>
 </body>
