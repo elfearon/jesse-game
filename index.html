@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bug's Forest ✨</title>
+<style>
+/* ── RESET ───────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#060410}
+
+/* ── SCENE ───────────────────────────────────── */
+#scene{
+  position:fixed;inset:0;
+  overflow:hidden;
+}
+
+/* ── FOREST BG (crossfade pair) ──────────────── */
+#forest-base,#forest-next{
+  position:absolute;inset:0;
+  background:center center/cover no-repeat;
+  pointer-events:none;
+}
+#forest-base{ background-image:url('forest.png'); } /* default fallback */
+#forest-next{ opacity:0; transition:opacity 3s ease; }
+
+/* Vignette always on top of both forest layers */
+#vignette{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 80% at 50% 60%, transparent 40%, rgba(4,2,12,.6) 100%);
+  pointer-events:none;
+}
+
+/* ── FOG TIME-OF-DAY TINTS ───────────────────── */
+#fog{ transition:filter 3s ease; }
+#scene.period-dawn #fog{ filter:hue-rotate(60deg)  saturate(.65) brightness(1.35); }
+#scene.period-day  #fog{ filter:hue-rotate(95deg)  saturate(.12) brightness(2.2);  }
+#scene.period-dusk #fog{ filter:hue-rotate(-55deg) saturate(1.25) brightness(.9);  }
+
+/* ── STARS TIME-OF-DAY ───────────────────────── */
+#stars{ transition:opacity 3s ease; }
+#scene.period-dawn #stars,
+#scene.period-day  #stars{ opacity:0; pointer-events:none; }
+
+/* ── MOON ─────────────────────────────────────── */
+#moon{
+  position:absolute;
+  width:72px;height:72px;
+  background:radial-gradient(circle at 38% 36%, #fffde8, #ffeea0 45%, #ffd050 100%);
+  border-radius:50%;
+  box-shadow:
+    0 0 0 2px rgba(255,253,224,.7),
+    0 0 20px rgba(255,253,200,.95),
+    0 0 50px rgba(255,240,140,.6),
+    0 0 95px rgba(255,220,80,.32),
+    0 0 170px rgba(255,210,50,.16);
+  left:calc(36.1% - 36px);
+  top:calc(100% + 100px);
+  z-index:1;
+  transition:top 10s cubic-bezier(.2,.8,.3,1);
+  pointer-events:none;
+  animation:moonPulse 4s ease-in-out infinite;
+  will-change:transform,opacity,top;
+  backface-visibility:hidden;
+}
+#moon.risen{ top:calc(5.8% - 36px); }
+/* atmospheric halo — transparent center preserves moon disc, ring glow beyond */
+#moon::before{
+  content:'';
+  position:absolute;
+  width:260px;height:260px;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(circle,
+    transparent 28%,
+    rgba(255,253,224,.22) 36%,
+    rgba(255,248,200,.13) 50%,
+    rgba(255,240,150,.06) 64%,
+    transparent 80%);
+  animation:moonHalo 4s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes moonPulse{
+  0%,100%{
+    box-shadow:
+      0 0 0 2px rgba(255,253,224,.7),
+      0 0 20px rgba(255,253,200,.95),
+      0 0 50px rgba(255,240,140,.6),
+      0 0 95px rgba(255,220,80,.32),
+      0 0 170px rgba(255,210,50,.16);
+  }
+  50%{
+    box-shadow:
+      0 0 0 3px rgba(255,253,224,.9),
+      0 0 30px rgba(255,253,200,1),
+      0 0 72px rgba(255,240,140,.78),
+      0 0 130px rgba(255,220,80,.46),
+      0 0 220px rgba(255,210,50,.22);
+  }
+}
+@keyframes moonHalo{
+  0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}
+  50%     {opacity:1; transform:translate(-50%,-50%) scale(1.1)}
+}
+
+/* ── FOG LAYERS ──────────────────────────────── */
+#fog{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.fog-layer{position:absolute;border-radius:50%;will-change:transform,opacity;backface-visibility:hidden}
+
+/* Layer 1 — ground fog bank: slow, breathing, low opacity */
+.fog-1{
+  width:200%;height:35%;
+  left:-50%;bottom:-5%;
+  background:radial-gradient(ellipse at 50% 90%,rgba(200,184,232,.48),rgba(74,42,110,.28) 45%,transparent 78%);
+  filter:blur(22px);
+  animation:fog1 8s ease-in-out infinite;
+  animation-delay:0s;
+}
+@keyframes fog1{
+  0%  {transform:translateX(0)  scaleX(1);    opacity:0}
+  50% {transform:translateX(8%) scaleX(1.04); opacity:.55}
+  100%{transform:translateX(0)  scaleX(1);    opacity:0}
+}
+
+/* Layer 2 — low-mid drift: medium speed, teal-blue */
+.fog-2{
+  width:170%;height:28%;
+  left:-35%;bottom:8%;
+  background:radial-gradient(ellipse at 48% 70%,rgba(184,216,232,.40),rgba(26,58,90,.25) 50%,transparent 78%);
+  filter:blur(28px);
+  animation:fog2 5.5s ease-in-out infinite;
+  animation-delay:-1.4s;
+}
+@keyframes fog2{
+  0%  {transform:translateX(0)    scaleY(1);    opacity:0}
+  50% {transform:translateX(-10%) scaleY(1.05); opacity:.50}
+  100%{transform:translateX(0)    scaleY(1);    opacity:0}
+}
+
+/* Layer 3 — hero rolling bank: very slow, covers mid-scene */
+.fog-3{
+  width:220%;height:55%;
+  left:-60%;bottom:18%;
+  background:radial-gradient(ellipse at 50% 55%,rgba(100,65,145,.36),rgba(74,42,110,.22) 40%,rgba(26,58,90,.10) 65%,transparent 84%);
+  filter:blur(35px);
+  animation:fog3 11s ease-in-out infinite;
+  animation-delay:-5.5s;
+}
+@keyframes fog3{
+  0%  {transform:translateX(0)   scale(1,1);      opacity:0}
+  50% {transform:translateX(12%) scale(1.02,.98); opacity:.52}
+  100%{transform:translateX(0)   scale(1,1);      opacity:0}
+}
+
+/* Layer 4 — upper mid: medium speed, teal */
+.fog-4{
+  width:160%;height:40%;
+  left:-30%;bottom:30%;
+  background:radial-gradient(ellipse at 55% 50%,rgba(184,216,232,.36),rgba(10,74,74,.22) 52%,transparent 80%);
+  filter:blur(40px);
+  animation:fog4 7s ease-in-out infinite;
+  animation-delay:-2.8s;
+}
+@keyframes fog4{
+  0%  {transform:translateX(0)   scaleX(1);   opacity:0}
+  50% {transform:translateX(-8%) scaleX(.97); opacity:.48}
+  100%{transform:translateX(0)   scaleX(1);   opacity:0}
+}
+
+
+/* ── BIRDS ───────────────────────────────────── */
+#birds{position:absolute;inset:0;z-index:4;pointer-events:none}
+.flock{position:absolute;pointer-events:none;will-change:transform;backface-visibility:hidden}
+.bird{position:absolute;width:7px;height:4px;will-change:transform}
+.bird::before,
+.bird::after{
+  content:'';
+  position:absolute;
+  top:0;
+  width:3.5px;height:4px;
+  border-top:2px solid rgba(15,8,28,.65);
+  border-radius:50% 50% 0 0 / 100% 100% 0 0;
+  animation-duration:.55s;
+  animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite;
+  animation-direction:alternate;
+  animation-delay:var(--fd,0s);
+}
+.bird::before{left:0;transform-origin:100% 100%;animation-name:wingL}
+.bird::after {left:3.5px;transform-origin:0% 100%;animation-name:wingR}
+@keyframes wingL{from{transform:rotate(0deg)}to{transform:rotate(-20deg)}}
+@keyframes wingR{from{transform:rotate(0deg)}to{transform:rotate( 20deg)}}
+@keyframes flockRight{
+  from{transform:translateX(-200px)}
+  to  {transform:translateX(calc(100vw + 200px))}
+}
+@keyframes flockLeft{
+  from{transform:translateX(calc(100vw + 200px))}
+  to  {transform:translateX(-200px)}
+}
+
+
+/* ── SPORE CLOUDS ────────────────────────────── */
+#spores{position:absolute;inset:0;z-index:2;pointer-events:none}
+/* spore particles are fully JS/rAF-driven — no CSS animation */
+
+/* ── CRITTERS LAYER ──────────────────────────── */
+#critters{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;mix-blend-mode:screen}
+
+/* ── BUG CONTAINER ───────────────────────────── */
+/*  bug.png is 1024×1536, shown at 210px wide → 315px tall  */
+#bug-wrap{
+  position:absolute;
+  bottom:5%;
+  left:50%;transform:translateX(-50%);
+  width:210px;height:315px;
+  transform-origin:center bottom;
+  z-index:10;
+  transition:transform .35s cubic-bezier(.25,.46,.45,.94), bottom .8s ease;
+  will-change:transform;
+  backface-visibility:hidden;
+}
+
+/* the actual image — multiply removes the black bg */
+#bug-img{
+  display:block;
+  width:100%;height:100%;
+  object-fit:contain;
+  mix-blend-mode:multiply;
+  transform-origin:center bottom;
+  transition:filter .4s ease, transform .4s ease;
+  pointer-events:none;
+  will-change:transform,filter,opacity;
+  backface-visibility:hidden;
+}
+
+/* sad state */
+#bug-wrap.sad #bug-img{
+  filter:saturate(.4) brightness(.85);
+  transform:translateY(6px);
+}
+
+/* ── CLICK ZONES ─────────────────────────────── */
+/* Hit zones are computed in JS via getBoundingClientRect() — no CSS divs needed. */
+#bug-wrap{cursor:pointer}
+
+/* ── FANCY OVERLAY (hat, mustache, monocle) ──── */
+/* fancy.png is 1536×1024 — same proportions as the forest scene.
+   Treated as a full-scene overlay so accessories land on Bug. */
+#fancy{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;object-position:center center;
+  pointer-events:none;z-index:18;
+  opacity:0;
+  transform-origin:50% 62%; /* rotate around Bug's face area */
+  transition:opacity .2s;
+}
+#fancy.show{
+  opacity:1;
+  animation:fancyWig .5s ease-in-out infinite alternate;
+}
+@keyframes fancyWig{
+  from{transform:rotate(-3deg)}
+  to  {transform:rotate( 3deg)}
+}
+@keyframes fancyPop{
+  0%  {opacity:1;transform:scale(1)}
+  45% {opacity:.6;transform:scale(1.18)}
+  100%{opacity:0;transform:scale(.25)}
+}
+#fancy.popping{animation:fancyPop .45s ease-in forwards}
+
+/* ── EYELIDS ──────────────────────────────────── */
+/* Approximate positions over Bug's eyeball locations in bug.png.
+   Tune top/left/right if they don't land on her eyes perfectly. */
+
+/* ── BLANKET ─────────────────────────────────── */
+#blanket{
+  position:absolute;
+  bottom:-4%;left:5%;right:5%;height:38%;
+  background:linear-gradient(160deg,#7030a0 0%,#501870 35%,#9040b8 65%,#6828a0 100%);
+  border-radius:14px 14px 6px 6px;
+  transform:translateY(115%);
+  transition:transform 1.3s cubic-bezier(.25,.46,.45,.94);
+  z-index:16;
+  box-shadow:inset 0 5px 14px rgba(255,200,255,.12), 0 -6px 22px rgba(120,40,180,.5);
+  pointer-events:none;
+}
+#blanket::before{
+  content:'✦  ✦  ✦';
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  font-size:10px;color:rgba(255,210,255,.45);
+  letter-spacing:10px;white-space:nowrap;
+}
+#blanket::after{
+  content:'';position:absolute;
+  bottom:0;left:0;right:0;height:8px;
+  background:rgba(255,210,255,.1);
+  border-radius:0 0 6px 6px;
+}
+#blanket.on { transform:translateY(30%); }
+#blanket.off{ transform:translateY(115%); }
+
+/* ── SLEEP OVERLAY (darkens scene during sleep) ── */
+#sleep-veil{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg, transparent 30%, rgba(30,10,60,.55) 100%);
+  border-radius:4px;
+  opacity:0;pointer-events:none;z-index:11;
+  transition:opacity .8s ease;
+}
+#sleep-veil.show{opacity:1}
+
+/* ── SPEECH BUBBLE ───────────────────────────── */
+#bubble{
+  position:absolute;
+  bottom:calc(5% + 290px);
+  left:50%;
+  transform:translateX(-12%);
+  background:rgba(255,255,255,.94);
+  border:2px solid rgba(180,120,255,.55);
+  border-radius:16px;
+  padding:7px 16px;
+  font-size:15px;color:#3a1860;
+  white-space:nowrap;
+  opacity:0;pointer-events:none;
+  z-index:40;
+  box-shadow:0 3px 20px rgba(150,80,255,.25), 0 0 40px rgba(120,60,200,.1);
+  transition:opacity .2s, transform .2s;
+  transform:translateX(-12%) scale(.92);
+}
+#bubble.show{
+  opacity:1;
+  transform:translateX(-12%) scale(1);
+}
+#bubble::after{
+  content:'';position:absolute;bottom:-11px;left:24px;
+  border:6px solid transparent;border-top-color:rgba(180,120,255,.55);
+}
+
+/* ── PARTICLES / ZZZ ─────────────────────────── */
+#particles{position:absolute;inset:0;pointer-events:none;z-index:50;overflow:visible}
+
+.zzz{
+  position:absolute;font-style:italic;
+  color:rgba(180,155,255,.92);font-family:Georgia,serif;
+  text-shadow:0 0 10px rgba(180,155,255,.6);
+  pointer-events:none;
+  animation:floatZzz 3.2s ease-out forwards;
+}
+@keyframes floatZzz{
+  0%  {transform:translateY(0) rotate(-10deg) scale(1);opacity:.9}
+  100%{transform:translateY(-80px) rotate(18deg) scale(.55);opacity:0}
+}
+
+.sparkle{
+  position:absolute;width:9px;height:9px;border-radius:50%;
+  background:radial-gradient(circle,#fff 0%,#d8a8ff 55%,transparent 72%);
+  pointer-events:none;
+  animation:sparkAnim .8s ease-out forwards;
+}
+@keyframes sparkAnim{
+  0%  {transform:scale(0) rotate(0);opacity:1}
+  55% {transform:scale(1.7) rotate(200deg);opacity:1}
+  100%{transform:scale(0) rotate(360deg);opacity:0}
+}
+
+.pop-p{
+  position:absolute;width:9px;height:9px;border-radius:50%;
+  background:#c06090;pointer-events:none;
+  animation:popOut .55s ease-out forwards;
+}
+@keyframes popOut{
+  0%  {transform:translate(0,0) scale(1);opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}
+}
+
+.float-e{
+  position:absolute;pointer-events:none;font-size:20px;
+  animation:floatE var(--dur,2.8s) ease-out forwards;
+}
+@keyframes floatE{
+  0%  {transform:translateY(0) rotate(0) scale(1);opacity:1}
+  100%{transform:translateY(var(--rise,-90px)) rotate(var(--spin,25deg)) scale(.65);opacity:0}
+}
+
+/* ── BUG ANIMATIONS ──────────────────────────── */
+@keyframes bugWiggle{
+  0%  {transform:translateX(-50%) rotate(0)}
+  16% {transform:translateX(-50%) rotate(-9deg)}
+  33% {transform:translateX(-50%) rotate(9deg)}
+  50% {transform:translateX(-50%) rotate(-6deg)}
+  66% {transform:translateX(-50%) rotate(6deg)}
+  83% {transform:translateX(-50%) rotate(-2deg)}
+  100%{transform:translateX(-50%) rotate(0)}
+}
+#bug-wrap.wiggling{animation:bugWiggle .7s ease-in-out}
+
+/* flutter: rapid hue-shift + slight scale shimmer applied to img */
+@keyframes flutterShim{
+  0%  {filter:hue-rotate(0deg)   brightness(1.3) saturate(1.5);transform:scaleX(1)   }
+  25% {filter:hue-rotate(90deg)  brightness(1.55) saturate(2);  transform:scaleX(1.06)}
+  50% {filter:hue-rotate(180deg) brightness(1.4) saturate(1.8); transform:scaleX(.94) }
+  75% {filter:hue-rotate(270deg) brightness(1.55) saturate(2);  transform:scaleX(1.06)}
+  100%{filter:hue-rotate(360deg) brightness(1.3) saturate(1.5); transform:scaleX(1)   }
+}
+#bug-img.flutter{animation:flutterShim .13s linear infinite}
+
+/* villain: grow + eerie tint */
+@keyframes villainSwell{
+  0%  {transform:scale(1)}
+  55% {transform:scale(1.52)}
+  100%{transform:scale(1.44)}
+}
+@keyframes villainShrink{
+  from{transform:scale(1.44)}
+  to  {transform:scale(1)}
+}
+#bug-wrap.v-in  #bug-img{
+  animation:villainSwell .4s ease-out forwards;
+  filter:saturate(2.5) hue-rotate(-20deg) brightness(1.1);
+}
+#bug-wrap.v-out #bug-img{
+  animation:villainShrink .6s ease-in-out forwards;
+  filter:none;
+}
+
+/* yawn */
+@keyframes yawnAnim{
+  0%  {transform:scale(1) translateY(0)}
+  28% {transform:scale(1.07) translateY(-6px)}
+  60% {transform:scale(1.03) translateY(-2px)}
+  100%{transform:scale(1) translateY(0)}
+}
+#bug-img.yawning{animation:yawnAnim 1.3s ease-in-out}
+
+/* lie-down sleep lean */
+@keyframes lieDown{
+  to{transform:rotate(80deg) translateX(-22%) scaleY(.82)}
+}
+@keyframes riseBack{
+  from{transform:rotate(80deg) translateX(-22%) scaleY(.82)}
+  to  {transform:rotate(0deg) translateX(0) scaleY(1)}
+}
+@keyframes sleepPuff{
+  0%,100%{transform:rotate(80deg) translateX(-22%) scaleY(.82)}
+  50%     {transform:rotate(80deg) translateX(-22%) scaleY(.88)}
+}
+
+#bug-img.lying  {animation:lieDown .9s ease-in-out forwards}
+#bug-img.asleep {animation:sleepPuff 2.3s ease-in-out infinite}
+#bug-img.waking {animation:riseBack .9s ease-in-out forwards}
+
+/* stretch on wake */
+@keyframes stretchAnim{
+  0%  {transform:rotate(0) scaleX(.9) translateY(0)}
+  35% {transform:rotate(-5deg) scaleX(1.1) translateY(-9px)}
+  70% {transform:rotate(3deg) scaleX(1.04)}
+  100%{transform:rotate(0) scaleX(1) translateY(0)}
+}
+#bug-img.stretch{animation:stretchAnim 1.1s ease-in-out}
+
+/* twirl dance */
+@keyframes twirl{
+  from{transform:translateX(-50%) rotate(0deg)}
+  to  {transform:translateX(-50%) rotate(360deg)}
+}
+#bug-wrap.twirl{animation:twirl .72s cubic-bezier(.4,0,.6,1)}
+
+/* ── METERS ───────────────────────────────────── */
+#meters{
+  position:fixed;top:20px;right:20px;
+  display:flex;flex-direction:column;gap:14px;
+  z-index:100;
+  /* glass pill */
+  background:rgba(8,4,20,.55);
+  border:1px solid rgba(160,100,255,.22);
+  border-radius:14px;
+  padding:14px 16px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 24px rgba(80,30,160,.25);
+}
+.meter{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.m-label{font-size:11px;color:rgba(210,175,255,.75);letter-spacing:.6px;font-family:Georgia,serif}
+.m-track{
+  width:120px;height:8px;
+  background:rgba(20,10,40,.7);
+  border-radius:4px;
+  border:1px solid rgba(120,70,200,.25);
+  overflow:hidden;
+}
+.m-fill{height:100%;border-radius:4px;transition:width .65s ease}
+#myFill   {background:linear-gradient(90deg,#9040e0,#d080ff)}
+#sleepFill{background:linear-gradient(90deg,#3050d0,#7098ff)}
+
+/* ── NOTE UI ──────────────────────────────────── */
+#noteBtn{
+  position:fixed;bottom:24px;right:24px;
+  background:rgba(8,4,20,.62);
+  border:1px solid rgba(160,100,255,.35);
+  border-radius:22px;
+  padding:9px 20px;
+  font-size:13px;color:rgba(210,175,255,.88);
+  cursor:pointer;font-family:Georgia,serif;
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 18px rgba(100,40,200,.28);
+  transition:transform .18s, box-shadow .18s;
+  z-index:100;
+}
+#noteBtn:hover{transform:translateY(-2px);box-shadow:0 0 28px rgba(150,80,255,.45)}
+
+#noteDisplay{
+  position:fixed;bottom:70px;right:24px;
+  background:rgba(8,4,20,.7);
+  border:1px solid rgba(160,100,255,.3);
+  border-radius:12px;
+  padding:8px 16px;
+  font-size:13px;color:rgba(210,175,255,.82);
+  max-width:270px;text-align:right;
+  display:none;
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 16px rgba(80,30,160,.3);
+  z-index:100;font-family:Georgia,serif;
+  line-height:1.5;
+}
+#noteDisplay.show{display:block}
+
+/* ── MODAL ────────────────────────────────────── */
+#modal{
+  display:none;position:fixed;inset:0;
+  background:rgba(6,2,18,.65);
+  backdrop-filter:blur(7px);
+  z-index:200;align-items:center;justify-content:center;
+}
+#modal.open{display:flex}
+.mbox{
+  background:rgba(12,6,30,.92);
+  border:1px solid rgba(180,110,255,.4);
+  border-radius:22px;padding:28px;width:340px;
+  box-shadow:0 0 50px rgba(100,40,200,.38);
+}
+.mbox h3{color:rgba(210,175,255,.92);margin-bottom:14px;font-size:16px;font-family:Georgia,serif}
+.mbox textarea{
+  width:100%;height:90px;
+  background:rgba(8,4,22,.7);
+  border:1px solid rgba(160,100,255,.35);
+  border-radius:12px;padding:10px;
+  font-family:Georgia,serif;font-size:13px;
+  color:rgba(210,175,255,.9);resize:none;outline:none;
+}
+.mbox textarea::placeholder{color:rgba(160,120,255,.35)}
+.mbox textarea:focus{border-color:rgba(200,130,255,.65)}
+.mbtns{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+.mbtns button{
+  padding:8px 20px;border-radius:16px;border:none;
+  cursor:pointer;font-family:Georgia,serif;font-size:13px;
+}
+#bSave  {background:linear-gradient(135deg,#7030b0,#a050e0);color:#fff}
+#bCancel{background:rgba(50,25,75,.7);color:rgba(190,150,255,.7)}
+
+/* ── CRITTERS (sprite sheet) ─────────────────── */
+/* mix-blend-mode:screen on #critters makes black pixels transparent against the dark forest */
+.sprite-critter{
+  position:absolute;
+  width:72px;height:96px;
+  background-image:url('critters.png');
+  background-size:400% 200%;
+  background-repeat:no-repeat;
+  animation:spriteBob 2.1s ease-in-out infinite alternate;
+}
+@keyframes spriteBob{from{transform:translateY(0)}to{transform:translateY(-9px)}}
+
+/* ── DEBUG ────────────────────────────────────── */
+#debug-time{position:fixed;top:4px;left:8px;z-index:999;font-size:11px;color:rgba(255,255,255,.5);font-family:monospace;pointer-events:none}
+
+/* ── STARS ────────────────────────────────────── */
+/* Each star gets its own @keyframes injected by JS — no shared animation here */
+#stars{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff}
+/* 4-pointed sparkle stars — clip-path overrides border-radius */
+.star-sparkle{
+  clip-path:polygon(50% 0%,57% 43%,100% 50%,57% 57%,50% 100%,43% 57%,0% 50%,43% 43%);
+  border-radius:0;
+  background:#fff;
+}
+</style>
+</head>
+<body>
+<div id="scene">
+
+  <!-- Forest backgrounds (crossfade pair) -->
+  <div id="forest-base"></div>
+  <div id="forest-next"></div>
+  <div id="vignette"></div>
+
+  <!-- Fog layers (above forest, below stars/critters/bug) -->
+  <div id="fog">
+    <div class="fog-layer fog-1"></div>
+    <div class="fog-layer fog-2"></div>
+    <div class="fog-layer fog-3"></div>
+    <div class="fog-layer fog-4"></div>
+  </div>
+
+  <!-- Stars (twinkling, above forest) -->
+  <div id="stars"></div>
+
+  <!-- Moon -->
+  <div id="moon"></div>
+
+  <!-- Critters layer -->
+  <div id="critters"></div>
+
+  <!-- Birds flock layer (above fog+critters, below bug) -->
+  <div id="birds"></div>
+
+  <!-- Spore clouds (above fog/stars, below critters/bug) -->
+  <div id="spores"></div>
+
+  <!-- Particles -->
+  <div id="particles"></div>
+
+  <!-- Bug -->
+  <div id="bug-wrap">
+    <img id="bug-img" src="bug.png" alt="Bug">
+
+    <div id="sleep-veil"></div>
+
+    <div id="blanket"></div>
+  </div>
+
+  <!-- Fancy overlay: hat + mustache + monocle (full-scene png) -->
+  <img id="fancy" src="fancy.png" alt="">
+
+  <!-- Speech bubble -->
+  <div id="bubble"></div>
+
+  <!-- Meters -->
+  <div id="meters">
+    <div class="meter">
+      <span class="m-label">miss you 💕</span>
+      <div class="m-track"><div class="m-fill" id="myFill" style="width:100%"></div></div>
+    </div>
+    <div class="meter">
+      <span class="m-label">sleepy 🌙</span>
+      <div class="m-track"><div class="m-fill" id="sleepFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Note -->
+  <div id="noteDisplay"></div>
+  <button id="noteBtn">leave a note 🍪</button>
+
+</div><!-- /scene -->
+
+<!-- Debug time display -->
+<div id="debug-time"></div>
+
+<!-- Modal -->
+<div id="modal">
+  <div class="mbox">
+    <h3>leave a note for Bug ✨</h3>
+    <textarea id="noteText" placeholder="say something sweet..."></textarea>
+    <div class="mbtns">
+      <button id="bCancel">cancel</button>
+      <button id="bSave">send 💕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════
+//  ELEMENTS
+// ═══════════════════════════════════════════════
+const $scene      = document.getElementById('scene');
+const $forestBase = document.getElementById('forest-base');
+const $forestNext = document.getElementById('forest-next');
+const $bugW   = document.getElementById('bug-wrap');
+const $bugI   = document.getElementById('bug-img');
+const $moon   = document.getElementById('moon');
+const $bubble = document.getElementById('bubble');
+const $fancy  = document.getElementById('fancy');
+const $blank  = document.getElementById('blanket');
+const $veil   = document.getElementById('sleep-veil');
+const $parts  = document.getElementById('particles');
+const $criL   = document.getElementById('critters');
+const $birds  = document.getElementById('birds');
+const $spores = document.getElementById('spores');
+const $myFill = document.getElementById('myFill');
+const $slFill = document.getElementById('sleepFill');
+const $noteD  = document.getElementById('noteDisplay');
+const $noteB  = document.getElementById('noteBtn');
+const $modal  = document.getElementById('modal');
+const $noteT  = document.getElementById('noteText');
+const $bSave  = document.getElementById('bSave');
+const $bCan   = document.getElementById('bCancel');
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const S = {
+  sleeping:   false,
+  villain:    false,
+  hasMust:    false,
+  busy:       false,
+  fluttering: false,
+  twirling:   false,
+  eyePoke:    false,
+  kissing:    false,    // true during 1s kisscat.png display
+  kissTm:     null,
+  worried:    false,    // true when MY < 50 and showing worriedbug.png
+  stayAwake:  false,    // true during the 1-min forced-awake window after a poke-wake
+  zzzInt:     null,
+  peekTm:     null,
+  napTm:      null,
+  stayAwakeTm:null,
+  bubbleTm:   null,
+  imgAnims:   new Set(), // track classes on #bug-img
+};
+
+// ═══════════════════════════════════════════════
+//  MISS-YOU PERSISTENCE
+// ═══════════════════════════════════════════════
+function loadMY() {
+  const base = parseFloat(localStorage.getItem('myBase') ?? '100');
+  const ts   = parseFloat(localStorage.getItem('myTs')   ?? Date.now());
+  // drains fully in ~15 real-world minutes of absence
+  return Math.max(0, base - ((Date.now() - ts) / 1000 / 900) * 100);
+}
+function saveMY(v) {
+  localStorage.setItem('myBase', v.toFixed(2));
+  localStorage.setItem('myTs',   Date.now());
+}
+let MY = loadMY();
+saveMY(MY);
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+function say(txt, ms = 3400) {
+  $bubble.textContent = txt;
+  $bubble.classList.add('show');
+  clearTimeout(S.bubbleTm);
+  S.bubbleTm = setTimeout(() => $bubble.classList.remove('show'), ms);
+}
+
+function sceneXY(el) {
+  const sr = $scene.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  return { x: er.left - sr.left + er.width/2, y: er.top - sr.top + er.height/2 };
+}
+
+function sparkles(el, n = 8) {
+  const {x, y} = sceneXY(el);
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const a = (i/n)*360, d = 24 + Math.random()*34;
+    s.style.left = (x + Math.cos(a*Math.PI/180)*d) + 'px';
+    s.style.top  = (y + Math.sin(a*Math.PI/180)*d) + 'px';
+    $parts.appendChild(s);
+    setTimeout(() => s.remove(), 900);
+  }
+}
+
+function floatEmoji(emoji, n = 5, near = $bugW) {
+  const {x, y} = sceneXY(near);
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      const d = document.createElement('div');
+      d.className = 'float-e';
+      d.textContent = emoji;
+      d.style.left = (x - 55 + Math.random()*110) + 'px';
+      d.style.top  = (y + 10) + 'px';
+      d.style.setProperty('--rise', (-75 - Math.random()*60) + 'px');
+      d.style.setProperty('--spin', (-35 + Math.random()*70) + 'deg');
+      d.style.setProperty('--dur',  (2.4 + Math.random()*.8) + 's');
+      $parts.appendChild(d);
+      setTimeout(() => d.remove(), 3400);
+    }, i * 360);
+  }
+}
+
+function popParticles(el) {
+  const {x, y} = sceneXY(el);
+  for (let i = 0; i < 10; i++) {
+    const p = document.createElement('div');
+    p.className = 'pop-p';
+    const a = (i/10)*360, d = 28 + Math.random()*24;
+    p.style.left = x + 'px'; p.style.top = y + 'px';
+    p.style.setProperty('--dx', Math.cos(a*Math.PI/180)*d + 'px');
+    p.style.setProperty('--dy', Math.sin(a*Math.PI/180)*d + 'px');
+    $parts.appendChild(p);
+    setTimeout(() => p.remove(), 650);
+  }
+}
+
+function floatHearts() {
+  const glyphs = ['❤️','🩷','💗','💖','💕','❤️','🩷'];
+  const n = 5 + Math.floor(Math.random() * 3); // 5–7
+  const {x, y} = sceneXY($bugW);
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      const d = document.createElement('div');
+      d.className = 'float-e';
+      d.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+      d.style.fontSize = (13 + Math.random() * 11) + 'px';
+      d.style.left = (x - 65 + Math.random() * 130) + 'px';
+      d.style.top  = (y - 20) + 'px';
+      d.style.setProperty('--rise', (-80 - Math.random() * 80) + 'px');
+      d.style.setProperty('--spin', (-25 + Math.random() * 50) + 'deg');
+      d.style.setProperty('--dur',  (1.6 + Math.random() * 1.2) + 's');
+      $parts.appendChild(d);
+      setTimeout(() => d.remove(), 3200);
+    }, i * 130);
+  }
+}
+
+function spawnZzz() {
+  const d = document.createElement('div');
+  d.className = 'zzz';
+  d.textContent = ['z','zz','zzz'][Math.floor(Math.random()*3)];
+  d.style.fontSize = (12 + Math.random()*13) + 'px';
+  const {x, y} = sceneXY($bugW);
+  d.style.left = (x + 5 + Math.random()*22) + 'px';
+  d.style.top  = (y - 20) + 'px';
+  $parts.appendChild(d);
+  setTimeout(() => d.remove(), 3400);
+}
+
+// Image animation class manager — prevents conflicts
+function imgClass(add, remove = []) {
+  if (!Array.isArray(remove)) remove = [remove];
+  remove.forEach(c => $bugI.classList.remove(c));
+  void $bugI.offsetWidth; // reflow
+  if (add) $bugI.classList.add(add);
+}
+
+function onInteract() {
+  MY = Math.min(100, MY + 20);
+  saveMY(MY);
+  syncBase();
+}
+
+// ═══════════════════════════════════════════════
+//  WIGGLE
+// ═══════════════════════════════════════════════
+function wiggle() {
+  $bugW.classList.remove('wiggling');
+  void $bugW.offsetWidth;
+  $bugW.classList.add('wiggling');
+  setTimeout(() => $bugW.classList.remove('wiggling'), 750);
+}
+
+// ═══════════════════════════════════════════════
+//  HIT ZONES — precise click detection via getBoundingClientRect
+// ═══════════════════════════════════════════════
+// All values are fractions of the bug image (0..1, top-left origin).
+// Checked in priority order — specific zones first, body last.
+const HIT_ZONES = [
+  { id:'eyeLeft',   t:0.13, b:0.33, l:0.16, r:0.36, color:'rgba(255,80,80,.45)',   label:'eye L'  },
+  { id:'eyeRight',  t:0.13, b:0.33, l:0.47, r:0.67, color:'rgba(255,80,80,.45)',   label:'eye R'  },
+  { id:'mouth',     t:0.48, b:0.58, l:0.42, r:0.58, color:'rgba(255,210,50,.55)',  label:'mouth'  },
+  { id:'wingLeft',  t:0.35, b:0.65, l:0.00, r:0.25, color:'rgba(80,200,255,.45)',  label:'wing L' },
+  { id:'wingRight', t:0.35, b:0.65, l:0.75, r:1.00, color:'rgba(80,200,255,.45)',  label:'wing R' },
+  { id:'body',      t:0.30, b:0.85, l:0.20, r:0.80, color:'rgba(100,255,150,.35)', label:'body'   },
+];
+
+function inZone(z, px, py) {
+  return px >= z.l && px <= z.r && py >= z.t && py <= z.b;
+}
+
+// Preload alternate images so swaps are instant
+(function(){
+  ['lefteye.png','righteye.png','asleep.png','kisscat.png','worriedbug.png']
+    .forEach(s => { new Image().src = s; });
+})();
+
+// Returns the correct resting image based on Miss You level
+function baseImg() {
+  return (MY < 50) ? 'worriedbug.png' : 'bug.png';
+}
+
+// Swaps to the correct base image when no temp state is active;
+// tracks S.worried so swaps only happen when the threshold actually changes.
+function syncBase() {
+  if (S.sleeping || S.eyePoke || S.kissing || S.busy) return;
+  const want = baseImg();
+  if (!S.worried && want === 'worriedbug.png') {
+    S.worried = true;
+    $bugI.src = 'worriedbug.png';
+  } else if (S.worried && want === 'bug.png') {
+    S.worried = false;
+    $bugI.src = 'bug.png';
+  }
+}
+
+function pokeEye(altSrc) {
+  if (S.eyePoke) return;
+  S.eyePoke = true;
+  $bugI.src = altSrc;
+  say('Ow! 🌟', 2000);
+  setTimeout(() => { S.eyePoke = false; $bugI.src = baseImg(); }, 1500);
+}
+
+// ── Unified click handler ──────────────────────
+$bugW.addEventListener('click', e => {
+  e.stopPropagation();
+
+  // Any click wakes Bug from sleep
+  if (S.sleeping) { wakeUp(); return; }
+
+  // Map click to fraction of the rendered bug image
+  const r  = $bugI.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width;
+  const py = (e.clientY - r.top)  / r.height;
+
+  // Find first matching zone in priority order
+  const zone = HIT_ZONES.find(z => inZone(z, px, py));
+
+  switch (zone?.id) {
+    case 'eyeLeft':
+      onInteract();
+      pokeEye('lefteye.png');
+      break;
+
+    case 'eyeRight':
+      onInteract();
+      pokeEye('righteye.png');
+      break;
+
+    case 'mouth':
+      if (S.hasMust) break;
+      onInteract();
+      S.hasMust = true;
+      $fancy.classList.remove('popping');
+      $fancy.classList.add('show');
+      say('🎩 very distinguished!!');
+      setTimeout(() => {
+        S.hasMust = false;
+        $fancy.classList.remove('show');
+        $fancy.classList.add('popping');
+        popParticles($fancy);
+        say('pop! ✨', 2200);
+        setTimeout(() => $fancy.classList.remove('popping'), 500);
+      }, 5000);
+      break;
+
+    case 'wingLeft':
+    case 'wingRight':
+      if (S.fluttering) break;
+      onInteract();
+      S.fluttering = true;
+      $bugI.classList.add('flutter');
+      setTimeout(() => { $bugI.classList.remove('flutter'); S.fluttering = false; }, 1700);
+      break;
+
+    case 'body':
+    default:
+      onInteract();
+      wiggle();
+      sparkles($bugW);
+      floatHearts();
+      say('beep beep 🐛');
+      if (!S.kissing) {
+        S.kissing = true;
+        $bugI.src = 'kisscat.png';
+        $bugI.style.mixBlendMode = 'screen';
+        S.kissTm = setTimeout(() => {
+          S.kissTm = null; S.kissing = false;
+          $bugI.style.mixBlendMode = '';
+          $bugI.src = baseImg();
+        }, 1000);
+      }
+      break;
+  }
+});
+
+
+// ═══════════════════════════════════════════════
+//  HOVER — lean + occasional twirl
+// ═══════════════════════════════════════════════
+let lastMove = 0;
+$scene.addEventListener('mousemove', e => {
+  if (S.sleeping || S.villain || S.twirling) return;
+  const sr = $scene.getBoundingClientRect();
+  const dx = e.clientX - (sr.left + sr.width/2);
+  const lean = Math.max(-11, Math.min(11, dx/26));
+  $bugW.style.transform = `translateX(-50%) rotate(${lean}deg)`;
+
+  // random twirl chance — low probability per mouse move, cooldown 8s
+  const now = Date.now();
+  if (now - lastMove > 8000 && Math.random() < 0.008) {
+    lastMove = now;
+    S.twirling = true;
+    $bugW.classList.add('twirl');
+    setTimeout(() => {
+      $bugW.classList.remove('twirl');
+      S.twirling = false;
+    }, 750);
+  }
+});
+$scene.addEventListener('mouseleave', () => {
+  if (!S.sleeping) $bugW.style.transform = 'translateX(-50%)';
+});
+
+// ═══════════════════════════════════════════════
+//  SLEEP / WAKE
+// ═══════════════════════════════════════════════
+function fallAsleep(autoWakeSecs = 0) {
+  if (S.sleeping) return;
+  S.sleeping = true;
+  S.busy = true;
+  // Clear any temp image states and return to base image before sleep
+  if (S.kissing)  { clearTimeout(S.kissTm); S.kissTm = null; S.kissing = false; $bugI.style.mixBlendMode = ''; }
+  if (S.eyePoke)  { S.eyePoke = false; }
+  $bugI.src = baseImg();
+  $bubble.classList.remove('show');
+
+  // 1. Yawn
+  imgClass('yawning', []);
+  say('*yaaaawn* 😪', 2200);
+
+  setTimeout(() => {
+    $bugI.classList.remove('yawning');
+
+    // 2. Lie down
+    imgClass('lying', ['stretch']);
+    $veil.classList.add('show');
+
+    setTimeout(() => {
+      // 3. Sleeping state (puff breathing) — swap to sleeping image
+      $bugI.classList.remove('lying');
+      $bugI.src = 'asleep.png';
+      $bugI.classList.add('asleep');
+
+      // 4. ZZZs
+      S.zzzInt = setInterval(spawnZzz, 1900);
+
+      // 5. Moon rises
+      $moon.classList.add('risen');
+
+      // 6. Suspicious peek loop
+      schedulePeek();
+
+      // Auto-wake for nap
+      if (autoWakeSecs > 0) {
+        S.napTm = setTimeout(() => wakeUp(false), autoWakeSecs * 1000);
+      }
+    }, 950);
+  }, 1400);
+}
+
+function wakeUp(fromInteract = true) {
+  if (!S.sleeping) return;
+  S.sleeping = false;
+  S.busy = false;
+
+  clearInterval(S.zzzInt);
+  clearTimeout(S.peekTm);
+  clearTimeout(S.napTm);
+  clearTimeout(S.stayAwakeTm);
+  S.stayAwakeTm = null;
+  S.stayAwake = false;
+
+  // Swap back to base image before rise animation
+  $bugI.src = baseImg();
+  $veil.classList.remove('show');
+
+  // Rise + stretch
+  $bugI.classList.remove('asleep','lying');
+  imgClass('waking', []);
+  setTimeout(() => {
+    $bugI.classList.remove('waking');
+    imgClass('stretch', []);
+    setTimeout(() => $bugI.classList.remove('stretch'), 1200);
+  }, 950);
+
+  if (fromInteract) {
+    // Poke-wake: boost Miss You, keep moon up, stay awake for 1 minute
+    onInteract();
+    say('mmph... 😴 oh! hi!!');
+    S.stayAwake = true;
+    S.stayAwakeTm = setTimeout(() => {
+      S.stayAwake = false;
+      S.stayAwakeTm = null;
+      // After 1 min, go back to sleep if it's still nighttime
+      if (sleepiness() >= 95 && !S.sleeping && !S.busy) {
+        fallAsleep(0);
+      }
+    }, 60000);
+  } else {
+    // Natural wake (8am alarm or nap timeout): remove moon, say good morning
+    say('*stretch* ✨ good morning', 3000);
+    $moon.classList.remove('risen');
+  }
+}
+
+function schedulePeek() {
+  const delay = 8000 + Math.random() * 7000;
+  S.peekTm = setTimeout(() => {
+    if (!S.sleeping) return;
+    say('...👀', 1600);
+    // subtle tilt to imply peeking eye
+    $bugW.style.transform = 'translateX(-50%) rotate(-4deg)';
+    setTimeout(() => {
+      if (!S.sleeping) return;
+      $bugW.style.transform = 'translateX(-50%) rotate(4deg)';
+      setTimeout(() => {
+        if (!S.sleeping) return;
+        $bugW.style.transform = 'translateX(-50%) rotate(0deg)';
+        schedulePeek();
+      }, 700);
+    }, 700);
+  }, delay);
+}
+
+// ═══════════════════════════════════════════════
+//  VILLAIN MODE
+// ═══════════════════════════════════════════════
+function villainMode() {
+  if (S.busy || S.sleeping) return;
+  S.busy = true; S.villain = true;
+  $bugW.classList.add('v-in');
+  say('muahahaha 😈', 3600);
+  setTimeout(() => {
+    $bugW.classList.remove('v-in');
+    $bugW.classList.add('v-out');
+    say('...ahem. nevermind. 😇', 2500);
+    setTimeout(() => {
+      $bugW.classList.remove('v-out');
+      S.villain = false; S.busy = false;
+    }, 700);
+  }, 3700);
+}
+
+// ═══════════════════════════════════════════════
+//  RANDOM EVENTS
+// ═══════════════════════════════════════════════
+function scheduleRandom() {
+  setTimeout(() => {
+    if (!S.busy && !S.sleeping && !S.stayAwake) {
+      if (Math.random() < .5) villainMode();
+      else fallAsleep(10 + Math.random() * 5); // nap 10–15s
+    }
+    scheduleRandom();
+  }, 45000 + Math.random() * 45000);
+}
+
+// ═══════════════════════════════════════════════
+//  METERS
+// ═══════════════════════════════════════════════
+function estHour() {
+  const h = parseInt(
+    new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false})
+      .formatToParts(new Date()).find(p=>p.type==='hour').value, 10);
+  return h === 24 ? 0 : h; // midnight guard
+}
+
+function sleepiness() {
+  const h = estHour();
+  if (h >= 22) return Math.min(100, (h - 22) * 35 + 8);
+  if (h <   8) return Math.min(100, (8  -  h) * 13 + 4);
+  return 0;
+}
+
+let sadTimer = null;
+function updateMeters() {
+  MY = loadMY();
+  $myFill.style.width = MY + '%';
+
+  // sad mode
+  if (MY <= 3 && !S.sleeping) {
+    $bugW.classList.add('sad');
+    if (!sadTimer) {
+      sadTimer = setInterval(() => {
+        if (MY > 3) { clearInterval(sadTimer); sadTimer = null; return; }
+        say('where is Mr. Cookie? 🍪', 4200);
+        floatEmoji('🍪', 6);
+      }, 8000);
+      say('where is Mr. Cookie? 🍪', 4200);
+      floatEmoji('🍪', 6);
+    }
+  } else {
+    $bugW.classList.remove('sad');
+    if (sadTimer) { clearInterval(sadTimer); sadTimer = null; }
+  }
+
+  // sleepy meter
+  const sl = sleepiness();
+  $slFill.style.width = sl + '%';
+
+  // moon position follows sleepiness softly — night only
+  if (currentPeriod === 'night' && sl > 0 && !$moon.classList.contains('risen')) {
+    $moon.style.top = (100 - Math.min(50, sl * 0.35)) + '%';
+  } else if (sl === 0 || currentPeriod !== 'night') {
+    if (!S.sleeping) { $moon.style.top = ''; $moon.classList.remove('risen'); }
+  }
+
+  // random yawn when drowsy (skip during stay-awake window)
+  if (sl > 45 && !S.sleeping && !S.busy && !S.stayAwake && Math.random() < .04) {
+    imgClass('yawning', []);
+    say('*yaaaawn* 😪', 2200);
+    setTimeout(() => $bugI.classList.remove('yawning'), 1400);
+  }
+
+  // auto-sleep at full sleepy meter (overnight, skip during stay-awake window)
+  if (sl >= 95 && !S.sleeping && !S.busy && !S.stayAwake) {
+    fallAsleep(0); // no auto-wake — stays until 8am
+  }
+
+  // sync worried face image when Miss You crosses the 50% threshold
+  syncBase();
+
+  // check for time-of-day period change
+  checkPeriod();
+
+  // debug: show NY time + period in top-left
+  const $dbg = document.getElementById('debug-time');
+  if ($dbg) $dbg.textContent = `NY ${estHour()}h · ${timePeriod()}`;
+}
+
+// ═══════════════════════════════════════════════
+//  TIME OF DAY
+// ═══════════════════════════════════════════════
+const BG_IMAGES = {
+  night: 'forest.png',
+  dawn:  'dawnforest.png',
+  day:   'dayforest.png',
+  dusk:  'duskforest.png',
+};
+
+let currentPeriod = null;
+
+function timePeriod() {
+  const h = estHour();
+  if (h >= 22 || h < 5)  return 'night';
+  if (h >= 5  && h < 8)  return 'dawn';
+  if (h >= 8  && h < 18) return 'day';
+  return 'dusk'; // 18–21
+}
+
+function applyPeriod(period, instant) {
+  if (period === currentPeriod) return;
+  currentPeriod = period;
+
+  // — Background crossfade —
+  const url = "url('" + BG_IMAGES[period] + "')";
+  if (instant) {
+    $forestBase.style.backgroundImage = url;
+  } else {
+    $forestNext.style.backgroundImage = url;
+    $forestNext.style.opacity = '1';
+    setTimeout(() => {
+      $forestBase.style.backgroundImage = url;
+      $forestNext.style.transition = 'none';
+      $forestNext.style.opacity = '0';
+      setTimeout(() => { $forestNext.style.transition = 'opacity 3s ease'; }, 50);
+    }, 3100);
+  }
+
+  // — Scene class for fog tint / star visibility —
+  $scene.classList.remove('period-night','period-dawn','period-day','period-dusk');
+  $scene.classList.add('period-' + period);
+
+  // — Moon: only visible during night —
+  if (period !== 'night') {
+    $moon.classList.remove('risen');
+    $moon.style.top = '';
+  }
+}
+
+function checkPeriod() { applyPeriod(timePeriod()); }
+
+setInterval(updateMeters, 3600);
+updateMeters();
+
+// Check if overnight sleep should end at 8am
+setInterval(() => {
+  const h = estHour();
+  if (h >= 8 && h < 22 && S.sleeping && !S.napTm) {
+    wakeUp(false);
+  }
+}, 20000);
+
+// ═══════════════════════════════════════════════
+//  NOTES
+// ═══════════════════════════════════════════════
+function loadNote() {
+  const n = localStorage.getItem('bugNote');
+  if (n) { $noteD.textContent = '💌 "' + n + '"'; $noteD.classList.add('show'); }
+}
+
+$noteB.addEventListener('click', () => {
+  $noteT.value = localStorage.getItem('bugNote') || '';
+  $modal.classList.add('open');
+  setTimeout(() => $noteT.focus(), 80);
+});
+$bCan.addEventListener('click', () => $modal.classList.remove('open'));
+$modal.addEventListener('click', e => { if (e.target === $modal) $modal.classList.remove('open'); });
+$bSave.addEventListener('click', () => {
+  const n = $noteT.value.trim();
+  if (!n) return;
+  localStorage.setItem('bugNote', n);
+  $noteD.textContent = '💌 "' + n + '"';
+  $noteD.classList.add('show');
+  $modal.classList.remove('open');
+  if (S.sleeping) wakeUp(false);
+  onInteract();
+  wiggle();
+  sparkles($bugW, 14);
+  floatEmoji('💕', 6);
+  say('💕 i will treasure this forever!! 💕', 4500);
+});
+loadNote();
+
+// ═══════════════════════════════════════════════
+//  CRITTERS
+// ═══════════════════════════════════════════════
+// Sprite sheet: 4×2 grid on critters.png (1536×1024)
+// Each cell = 25% width, 50% height
+// background-position percentages work with background-size:400% 200%
+const SPRITES = [
+  { name:'snail-mushroom',    bgPos:'0% 0%'       },
+  { name:'blue-fuzzy-cat',    bgPos:'33.33% 0%'   },
+  { name:'crystal-cat',       bgPos:'66.67% 0%'   },
+  { name:'squirrel',          bgPos:'100% 0%'     },
+  { name:'green-bee',         bgPos:'0% 100%'     },
+  { name:'owl',               bgPos:'33.33% 100%' },
+  { name:'brown-bee',         bgPos:'66.67% 100%' },
+  { name:'dark-bunny',        bgPos:'100% 100%'   },
+];
+
+function makeSpriteCritter() {
+  const s = SPRITES[Math.floor(Math.random() * SPRITES.length)];
+  const el = document.createElement('div');
+  el.className = 'sprite-critter';
+  el.style.backgroundPosition = s.bgPos;
+  // Vary the bob speed slightly per instance
+  el.style.animationDuration = (1.6 + Math.random() * 1.4).toFixed(2) + 's';
+  el.style.animationDelay    = (Math.random() * 1.2).toFixed(2) + 's';
+  return el;
+}
+
+const DEPTH_BANDS = [
+  { topMin:0,  topMax:25,  scale:0.30, opMin:0.30, opMax:0.50, blur:3.0, speedMin:40000, speedMax:60000, spawnMin:12000, spawnMax:22000, z:1 },
+  { topMin:25, topMax:50,  scale:0.50, opMin:0.50, opMax:0.70, blur:1.5, speedMin:28000, speedMax:45000, spawnMin:10000, spawnMax:18000, z:2 },
+  { topMin:50, topMax:75,  scale:0.75, opMin:0.70, opMax:0.90, blur:0.0, speedMin:18000, speedMax:32000, spawnMin:9000,  spawnMax:15000, z:3 },
+  { topMin:75, topMax:100, scale:1.00, opMin:0.90, opMax:1.00, blur:0.0, speedMin:12000, speedMax:22000, spawnMin:8000,  spawnMax:14000, z:4 },
+];
+
+function spawnCritter(band) {
+  const critter = makeSpriteCritter();
+
+  const goRight = Math.random() < 0.5;
+  const startX  = goRight ? -120 : window.innerWidth + 80;
+  const endX    = goRight ? window.innerWidth + 120 : -120;
+  const dur     = band.speedMin + Math.random() * (band.speedMax - band.speedMin);
+  const topPct  = band.topMin + Math.random() * (band.topMax - band.topMin);
+  const opacity = band.opMin  + Math.random() * (band.opMax  - band.opMin);
+  const scaleX  = goRight ? band.scale : -band.scale;
+
+  // Wrapper handles movement, depth scale, opacity, blur
+  // Inner critter keeps its own bob/float animation (no transform conflict)
+  const scaleStr = `scale(${scaleX.toFixed(3)},${band.scale.toFixed(3)})`;
+  const wrapper = document.createElement('div');
+  let ws = `position:absolute;top:${topPct.toFixed(2)}%;left:0;` +
+    `transform:translateX(${startX}px) ${scaleStr};` +
+    `opacity:${opacity.toFixed(3)};z-index:${band.z};` +
+    `transition:transform ${Math.round(dur)}ms linear;` +
+    `pointer-events:none;will-change:transform;backface-visibility:hidden;`;
+  if (band.blur > 0) ws += `filter:blur(${band.blur}px);`;
+  wrapper.style.cssText = ws;
+
+  wrapper.appendChild(critter);
+  $criL.appendChild(wrapper);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      wrapper.style.transform = `translateX(${endX}px) ${scaleStr}`;
+    });
+  });
+  setTimeout(() => wrapper.remove(), dur + 800);
+}
+
+function scheduleDepthBand(band) {
+  const delay = band.spawnMin + Math.random() * (band.spawnMax - band.spawnMin);
+  setTimeout(() => { spawnCritter(band); scheduleDepthBand(band); }, delay);
+}
+
+// Kick off each band independently with staggered initial spawns
+DEPTH_BANDS.forEach((band, i) => {
+  setTimeout(() => { spawnCritter(band); scheduleDepthBand(band); }, 3000 + i * 2500);
+});
+
+// ═══════════════════════════════════════════════
+//  STAR FIELD — 400 stars with depth layers + sparkle stars
+// ═══════════════════════════════════════════════
+(function buildStarfield() {
+  const N_SPARKLE = 7;   // 4-pointed sparkle stars (indices 0..6)
+  const N_FEATURE = 13;  // large glowing circles   (indices 7..19)
+  const TOTAL     = 400; // remaining are regular    (indices 20..399)
+
+  const layer = document.getElementById('stars');
+  let css = '';
+
+  // ── Deep sky palettes (top 60% of screen) ─────
+  // Cool whites, ice blues, faint lilac — distant starlight
+  const SKY_PAL = [
+    ['#ddeeff', '#ffffff', '#ddeeff'],  // barely-cool white
+    ['#b8d0ff', '#ffffff', '#b8d0ff'],  // ice blue ↔ white
+    ['#d8c8ff', '#f2eeff', '#c8deff'],  // lilac → lavender → ice
+    ['#ffffff', '#f8fdff', '#ffffff'],  // pure white with cool hint
+    ['#c8eaff', '#ffffff', '#d8eeff'],  // cool cross-fade
+  ];
+
+  // ── Forest palettes (bottom 40% of screen) ────
+  // Aqua / pale cyan to echo the bioluminescent teal of the trees
+  const FOREST_PAL = [
+    ['#a8f0e8', '#d0fff8', '#a8f0e8'],  // aqua ↔ pale cyan
+    ['#82e8d8', '#c5f5f0', '#92eee0'],  // teal ↔ pale aqua
+    ['#b2f0eb', '#e2fffc', '#b2f0eb'],  // pale cyan ↔ white-aqua
+    ['#9aeae0', '#cef8f2', '#b0f0eb'],  // medium aqua cross-fade
+  ];
+
+  for (let i = 0; i < TOTAL; i++) {
+    const isSparkle = i < N_SPARKLE;
+    const isFeature = !isSparkle && i < N_SPARKLE + N_FEATURE;
+    const isRegular = !isSparkle && !isFeature;
+
+    // ── Zone assignment ──────────────────────────
+    // Regular stars: ~60 % go to sky zone, ~40 % to forest zone
+    const inForest = isRegular && (Math.random() < 0.40);
+
+    // ── Vertical position ────────────────────────
+    let topPct;
+    if      (isSparkle) topPct = 2  + Math.random() * 53;  // sky only
+    else if (isFeature) topPct = 1  + Math.random() * 58;  // mostly sky
+    else if (inForest)  topPct = 60 + Math.random() * 39;  // forest zone
+    else                topPct =      Math.random() * 60;  // sky zone
+
+    // ── Size ─────────────────────────────────────
+    let size;
+    if      (isSparkle) size = 14  + Math.random() * 8;    // 14–22 px bounding box
+    else if (isFeature) size = 3.8 + Math.random() * 2.4;  // 3.8–6.2 px
+    else                size = 0.6 + Math.random() * 2.2;  // 0.6–2.8 px
+
+    // ── Timing ───────────────────────────────────
+    // Every star gets a different duration AND delay — the twin guarantors of asyncness.
+    // Forest stars run slower and their peak sits deeper in the cycle.
+    let dur, del, peak;
+    if (isSparkle) {
+      dur  = (3.0 + Math.random() * 3.0).toFixed(3);  // 3–6 s — slow, regal
+      del  = (Math.random() * 12).toFixed(3);          // wide phase spread
+      peak = (35  + Math.random() * 20).toFixed(1);   // peak at 35–55 %
+    } else if (inForest) {
+      dur  = (2.5 + Math.random() * 2.5).toFixed(3);  // 2.5–5 s — slower
+      del  = (Math.random() * 10).toFixed(3);
+      peak = (30  + Math.random() * 35).toFixed(1);   // broad, lazy peak
+    } else {
+      dur  = (1.5 + Math.random() * 2.5).toFixed(3);  // 1.5–4 s
+      del  = (Math.random() * 9).toFixed(3);
+      peak = (22  + Math.random() * 32).toFixed(1);   // peak at 22–54 %
+    }
+
+    // ── Brightness ───────────────────────────────
+    let opLo, opHi, sc;
+    if (isSparkle) {
+      opLo = (0.20 + Math.random() * 0.15).toFixed(3);
+      opHi = (0.88 + Math.random() * 0.12).toFixed(3);
+      sc   = (1.18 + Math.random() * 0.28).toFixed(3);
+    } else if (isFeature) {
+      opLo = (0.06 + Math.random() * 0.14).toFixed(3);
+      opHi = (0.85 + Math.random() * 0.15).toFixed(3);
+      sc   = (1.10 + Math.random() * 0.65).toFixed(3);
+    } else if (inForest) {
+      // softer — reflected bioluminescent light, not distant stars
+      opLo = (0.08 + Math.random() * 0.12).toFixed(3);
+      opHi = (0.32 + Math.random() * 0.28).toFixed(3);  // 0.32–0.60 max
+      sc   = (1.03 + Math.random() * 0.18).toFixed(3);  // barely grows
+    } else {
+      opLo = (0.06 + Math.random() * 0.16).toFixed(3);
+      opHi = (0.55 + Math.random() * 0.40).toFixed(3);
+      sc   = (1.08 + Math.random() * 0.30).toFixed(3);
+    }
+
+    // ── Colour palette ───────────────────────────
+    let pal;
+    if      (isSparkle) pal = ['#fffef0', '#ffffff', '#fffef0'];
+    else if (inForest)  pal = FOREST_PAL[Math.floor(Math.random() * FOREST_PAL.length)];
+    else                pal = SKY_PAL   [Math.floor(Math.random() * SKY_PAL.length)];
+
+    // ── Keyframe ─────────────────────────────────
+    if (isSparkle) {
+      // Sparkle rotates 45° over the full cycle (4-fold symmetry = invisible seam),
+      // and uses filter:drop-shadow so the glow hugs the star shape.
+      const glowLo = `drop-shadow(0 0 ${(size*0.45).toFixed(1)}px rgba(255,255,230,.45))`;
+      const glowHi = `drop-shadow(0 0 ${(size*1.1).toFixed(1)}px rgba(255,255,245,.95))`
+                   + ` drop-shadow(0 0 ${(size*2.8).toFixed(1)}px rgba(200,235,255,.38))`;
+      css += `@keyframes tw${i}{`
+           +   `0%{opacity:${opLo};transform:scale(1) rotate(0deg);filter:${glowLo}}`
+           +   `${peak}%{opacity:${opHi};transform:scale(${sc}) rotate(22.5deg);filter:${glowHi}}`
+           +   `100%{opacity:${opLo};transform:scale(1) rotate(45deg);filter:${glowLo}}`
+           + `}`;
+    } else {
+      // Circles: opacity + scale + background colour shift
+      css += `@keyframes tw${i}{`
+           +   `0%{opacity:${opLo};transform:scale(1);background:${pal[0]}}`
+           +   `${peak}%{opacity:${opHi};transform:scale(${sc});background:${pal[1]}}`
+           +   `100%{opacity:${opLo};transform:scale(1);background:${pal[2]}}`
+           + `}`;
+    }
+
+    // ── Box-shadow / glow ────────────────────────
+    // Sparkle stars get their glow from filter:drop-shadow (animated above).
+    let glow = '';
+    if (isFeature) {
+      glow = `0 0 ${(size*2.8).toFixed(1)}px rgba(210,232,255,.90),`
+           + `0 0 ${(size*6.5).toFixed(1)}px rgba(160,202,255,.28)`;
+    } else if (inForest) {
+      glow = `0 0 ${(size*2.2).toFixed(1)}px rgba(168,240,232,${
+               (parseFloat(opHi)*0.42).toFixed(2)})`;
+    } else if (!isSparkle) {
+      glow = `0 0 ${(size*1.6).toFixed(1)}px rgba(255,255,255,${
+               (parseFloat(opHi)*0.48).toFixed(2)})`;
+    }
+
+    // ── Build element ────────────────────────────
+    const s = document.createElement('div');
+    s.className = isSparkle ? 'star star-sparkle' : 'star';
+
+    let style =
+        `left:${(Math.random() * 100).toFixed(2)}%;`
+      + `top:${topPct.toFixed(2)}%;`
+      + `width:${size.toFixed(1)}px;`
+      + `height:${size.toFixed(1)}px;`
+      + `animation:tw${i} ${dur}s ease-in-out ${del}s infinite;`;
+
+    if (glow)        style += `box-shadow:${glow};`;
+    if (isFeature)   style += `filter:blur(${(0.3 + Math.random()*0.5).toFixed(1)}px);`;
+
+    s.style.cssText = style;
+    layer.appendChild(s);
+  }
+
+  // Inject all 400 keyframes in one DOM write
+  const tag = document.createElement('style');
+  tag.textContent = css;
+  document.head.appendChild(tag);
+})();
+
+// ═══════════════════════════════════════════════
+//  SPORE CLOUDS
+// ═══════════════════════════════════════════════
+// Estimated mushroom positions in the scene (% from left, % from top)
+const MUSHROOMS = [
+  {x: 6.0, y:64.2}, {x:22.3, y:85.2}, {x:23.4, y:61.4},
+  {x:57.8, y:62.3}, {x:72.9, y:53.6}, {x:93.4, y:50.3},
+];
+const SPORE_COLORS = [
+  'rgba(212,168,255', // soft purple
+  'rgba(168,240,232', // pale teal
+  'rgba(255,184,212', // warm pink
+  'rgba(200,220,255', // pale blue
+];
+
+const _sporePool = [];
+let   _sporeRaf  = null;
+
+function spawnSpores(m) {
+  if (_sporePool.length >= 60) return; // cap: skip emission if pool is full
+  const sw  = $scene.offsetWidth;
+  const sh  = $scene.offsetHeight;
+  const cx  = m.x / 100 * sw;
+  const cy  = m.y / 100 * sh;
+  const now = performance.now();
+  const count = 15 + Math.floor(Math.random() * 11); // 15–25
+
+  for (let i = 0; i < count; i++) {
+    const color = SPORE_COLORS[Math.floor(Math.random() * SPORE_COLORS.length)];
+    const blur  = 0.3 + Math.random() * 0.8;
+
+    // Spawn within 5px radius of mushroom cap
+    const spawnA = Math.random() * Math.PI * 2;
+    const spawnR = Math.random() * 5;
+
+    // Burst: gentle radial explosion, settles in ~0.4s
+    const burstA     = Math.random() * Math.PI * 2;
+    const burstMag   = 15 + Math.random() * 20;   // px
+    const burstDecay = 4  + Math.random() * 2;    // exp decay rate
+
+    const el = document.createElement('div');
+    el.style.cssText =
+      `position:absolute;border-radius:50%;pointer-events:none;` +
+      `background:${color},1);filter:blur(${blur.toFixed(1)}px);` +
+      `transform:translate(-50%,-50%);opacity:0;width:3px;height:3px;`;
+    $spores.appendChild(el);
+
+    _sporePool.push({
+      el,
+      sx:         cx + Math.cos(spawnA) * spawnR,
+      sy:         cy + Math.sin(spawnA) * spawnR,
+      burstVx:    Math.cos(burstA) * burstMag,
+      burstVy:    Math.sin(burstA) * burstMag,
+      burstDecay,
+      riseSpeed:  14 + Math.random() * 12,         // px/s upward
+      wobbleAmp:  6  + Math.random() * 10,         // px (ramps up)
+      wobbleFreq: 0.4 + Math.random() * 0.6,       // Hz
+      wobblePhase: Math.random() * Math.PI * 2,
+      startOp:    0.8 + Math.random() * 0.2,       // DEBUG: boosted opacity
+      startSize:  3   + Math.random(),              // px
+      endSize:    5   + Math.random(),              // px
+      dur:        3000 + Math.random() * 1500,      // ms
+      startTime:  now,
+      done:       false,
+    });
+  }
+
+  if (!_sporeRaf) _sporeRaf = requestAnimationFrame(_tickSpores);
+}
+
+function _tickSpores(now) {
+  let alive = false;
+
+  for (const p of _sporePool) {
+    if (p.done) continue;
+
+    const sec = (now - p.startTime) / 1000;  // elapsed seconds
+    const t   = sec * 1000 / p.dur;          // 0..1 lifetime fraction
+
+    if (t >= 1) { p.el.remove(); p.done = true; continue; }
+    alive = true;
+
+    // Burst: exponential decay — nearly gone by ~0.4s
+    const bd = Math.exp(-p.burstDecay * sec);
+    // Wobble: amplitude ramps up as particle rises (tight→spread)
+    const wobRamp = Math.min(1, sec * 1.5);
+    const wx = p.wobbleAmp * wobRamp * Math.sin(2 * Math.PI * p.wobbleFreq * sec + p.wobblePhase);
+
+    const x  = p.sx + p.burstVx * bd + wx;
+    const y  = p.sy + p.burstVy * bd - p.riseSpeed * sec;
+    const sz = p.startSize + (p.endSize - p.startSize) * t;
+    // Hold opacity for first 30%, then fade to 0 over remaining 70%
+    const op = t < 0.3 ? p.startOp : p.startOp * (1 - (t - 0.3) / 0.7);
+
+    const s = p.el.style;
+    s.left    = x.toFixed(1)          + 'px';
+    s.top     = y.toFixed(1)          + 'px';
+    s.width   = sz.toFixed(1)         + 'px';
+    s.height  = sz.toFixed(1)         + 'px';
+    s.opacity = Math.max(0, op).toFixed(3);
+  }
+
+  // Compact pool
+  for (let i = _sporePool.length - 1; i >= 0; i--) {
+    if (_sporePool[i].done) _sporePool.splice(i, 1);
+  }
+
+  _sporeRaf = alive ? requestAnimationFrame(_tickSpores) : null;
+}
+
+function scheduleSpores() {
+  spawnSpores(MUSHROOMS[Math.floor(Math.random() * MUSHROOMS.length)]);
+  setTimeout(scheduleSpores, 1000 + Math.random() * 1000); // DEBUG: fast interval
+}
+
+// ═══════════════════════════════════════════════
+//  BIRDS
+// ═══════════════════════════════════════════════
+function spawnFlock() {
+  if (currentPeriod !== 'day' && currentPeriod !== 'dusk') return;
+  const fromLeft = Math.random() < 0.5;
+  const count    = 8 + Math.floor(Math.random() * 5);          // 8–12 birds
+  const topPct   = Math.random() * 8;                          // top 8% only
+  const dur      = (12 + Math.random() * 3).toFixed(1) + 's'; // 12–15s crossing
+
+  const flock = document.createElement('div');
+  flock.className = 'flock';
+  flock.style.top  = topPct + '%';
+  flock.style.left = '0';
+  flock.style.animationName           = fromLeft ? 'flockRight' : 'flockLeft';
+  flock.style.animationDuration       = dur;
+  flock.style.animationTimingFunction = 'linear';
+  flock.style.animationFillMode       = 'forwards';
+
+  for (let i = 0; i < count; i++) {
+    const b = document.createElement('div');
+    b.className = 'bird';
+    // loose V: birds spread ~14px apart horizontally, lead bird at tip
+    const xOff = i * 14 + Math.random() * 8;
+    // vertical scatter: slight rise from lead, natural drift ±8px
+    const yOff = i === 0 ? 0 : (i * 1.2 + Math.random() * 10 - 5);
+    b.style.left = (fromLeft ? xOff : (count - 1 - i) * 14 + Math.random() * 8) + 'px';
+    b.style.top  = yOff + 'px';
+    b.style.setProperty('--fd', (Math.random() * 0.4).toFixed(2) + 's');
+    flock.appendChild(b);
+  }
+
+  $birds.appendChild(flock);
+  flock.addEventListener('animationend', () => flock.remove());
+}
+setInterval(spawnFlock, 15000);
+
+// ═══════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════
+
+// Set correct background instantly on load (no crossfade needed)
+applyPeriod(timePeriod(), true);
+
+// Preload all time-of-day backgrounds
+['dawnforest.png','dayforest.png','duskforest.png'].forEach(s => { new Image().src = s; });
+
+// Start ambient world effects
+scheduleSpores();
+
+scheduleRandom();
+
+</script>
+</body>
+</html>
