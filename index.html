@@ -751,11 +751,27 @@ function loadMY() {
   return Math.max(0, base - ((Date.now() - ts) / 1000 / 900) * 100);
 }
 function saveMY(v) {
-  localStorage.setItem('myBase', v.toFixed(2));
-  localStorage.setItem('myTs',   Date.now());
+  const base = v.toFixed(2);
+  const ts = Date.now();
+  localStorage.setItem('myBase', base);
+  localStorage.setItem('myTs',   ts);
+  fetch('/api/state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ myBase: parseFloat(base), myTs: ts })
+  }).catch(() => {});
 }
 let MY = loadMY();
 saveMY(MY);
+
+// Try loading state from server (overrides localStorage if fresher)
+fetch('/api/state').then(r => r.json()).then(d => {
+  if (d.myTs && d.myTs > parseFloat(localStorage.getItem('myTs') || '0')) {
+    localStorage.setItem('myBase', d.myBase);
+    localStorage.setItem('myTs',   d.myTs);
+    MY = loadMY();
+  }
+}).catch(() => {});
 
 // ═══════════════════════════════════════════════
 //  HELPERS
@@ -1309,6 +1325,14 @@ setInterval(() => {
 function loadNote() {
   const n = localStorage.getItem('bugNote');
   if (n) { $noteD.textContent = '💌 "' + n + '"'; $noteD.classList.add('show'); }
+  // Try server — overwrite localStorage if server has a note
+  fetch('/api/notes').then(r => r.json()).then(d => {
+    if (d.note) {
+      localStorage.setItem('bugNote', d.note);
+      $noteD.textContent = '💌 "' + d.note + '"';
+      $noteD.classList.add('show');
+    }
+  }).catch(() => {});
 }
 
 $noteB.addEventListener('click', () => {
@@ -1322,6 +1346,11 @@ $bSave.addEventListener('click', () => {
   const n = $noteT.value.trim();
   if (!n) return;
   localStorage.setItem('bugNote', n);
+  fetch('/api/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note: n })
+  }).catch(() => {});
   $noteD.textContent = '💌 "' + n + '"';
   $noteD.classList.add('show');
   $modal.classList.remove('open');
@@ -1732,6 +1761,21 @@ applyPeriod(timePeriod(), true);
 scheduleSpores();
 
 scheduleRandom();
+
+// ═══════════════════════════════════════════════
+//  BACKGROUND MUSIC
+// ═══════════════════════════════════════════════
+const $bgm = new Audio('Forest Cat Echoes - dawn.mp3');
+$bgm.loop = true;
+$bgm.volume = 0.35;
+$bgm.currentTime = 0;
+function startMusic() {
+  if ($bgm.paused) $bgm.play();
+  document.removeEventListener('click', startMusic);
+  $bugW.removeEventListener('click', startMusic);
+}
+document.addEventListener('click', startMusic);
+$bugW.addEventListener('click', startMusic);
 
 // ═══════════════════════════════════════════════
 //  DOCK BAR
